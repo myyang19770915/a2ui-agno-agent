@@ -76,7 +76,12 @@ async def chat(req: ChatRequest):
     if req.type == "action" and req.action_name:
         result = await agent.handle_action(req.session_id, req.action_name, req.action_data or {})
     else:
-        result = await agent.handle_message(req.session_id, req.content or "")
+        intent = await agent.classify_intent(req.content or "")
+        if intent in {"booking_form", "feedback_form", "usage_analytics_form"}:
+            agent._add(req.session_id, "user", req.content or "")
+            result = agent.open_form(req.session_id, intent)
+        else:
+            result = await agent.handle_message(req.session_id, req.content or "")
 
     return ChatResponse(
         session_id=req.session_id,
@@ -89,6 +94,9 @@ async def chat(req: ChatRequest):
 @app.post("/api/chat/stream")
 async def chat_stream(req: ChatRequest):
     """SSE streaming 端點 — LLM token 逐筆輸出給前端。"""
+    intent = None
+    if req.type != "action":
+        intent = await agent.classify_intent(req.content or "")
 
     # 使用 sync generator（非 async）：Starlette 會自動透過
     # iterate_in_threadpool() 在 thread pool 中執行 next()，
@@ -101,7 +109,11 @@ async def chat_stream(req: ChatRequest):
                     req.session_id, req.action_name, req.action_data or {}
                 )
             else:
-                gen = agent.stream_message(req.session_id, req.content or "")
+                if intent in {"booking_form", "feedback_form", "usage_analytics_form"}:
+                    agent._add(req.session_id, "user", req.content or "")
+                    gen = agent.stream_open_form(req.session_id, intent)
+                else:
+                    gen = agent.stream_message(req.session_id, req.content or "")
 
             for evt_type, evt_data in gen:
                 if evt_type == "token":
@@ -129,5 +141,5 @@ async def get_session(session_id: str):
 # ── Entry Point ────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print("🚀 A2UI Demo Backend running on http://localhost:8008")
-    uvicorn.run(app, host="0.0.0.0", port=8008)
+    print("🚀 A2UI Demo Backend running on http://localhost:8017")
+    uvicorn.run(app, host="0.0.0.0", port=8017)

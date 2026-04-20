@@ -25,6 +25,8 @@ A2UI JSON Builder
 Button click 時將 context 中指定的 binding 值送回後端。
 """
 
+from datetime import datetime, timedelta
+
 
 class A2UIBuilder:
 
@@ -245,4 +247,183 @@ class A2UIBuilder:
                     "comment": "",
                 }
             },
+        }
+
+    def build_usage_analytics_form(self) -> dict:
+        """使用次數分析查詢表單"""
+        today = datetime.now().date()
+        start = today - timedelta(days=6)
+        return {
+            "surfaceId": "usage_analytics_form",
+            "subtitle": "依 created_at 篩選日期區間，統計各 user_id 的使用次數",
+            "components": [
+                {
+                    "id": "analytics_title",
+                    "component": {
+                        "type": "Text",
+                        "text": "📊 使用次數分析",
+                        "variant": "h2",
+                    },
+                },
+                {
+                    "id": "analytics_hint",
+                    "component": {
+                        "type": "Text",
+                        "text": "created_at 可為 Unix Timestamp 或日期時間，系統會自動轉成日期後再做區間查詢。",
+                    },
+                },
+                {
+                    "id": "analytics_start_date",
+                    "component": {
+                        "type": "DateInput",
+                        "label": "開始日期",
+                        "binding": "/analytics/start_date",
+                        "required": True,
+                    },
+                },
+                {
+                    "id": "analytics_end_date",
+                    "component": {
+                        "type": "DateInput",
+                        "label": "結束日期",
+                        "binding": "/analytics/end_date",
+                        "required": True,
+                    },
+                },
+                {
+                    "id": "analytics_limit",
+                    "component": {
+                        "type": "Select",
+                        "label": "顯示前幾名 user_id",
+                        "binding": "/analytics/limit",
+                        "options": [
+                            {"label": "前 5 名", "value": "5"},
+                            {"label": "前 10 名", "value": "10"},
+                            {"label": "前 15 名", "value": "15"},
+                            {"label": "前 20 名", "value": "20"},
+                        ],
+                        "defaultValue": "10",
+                    },
+                },
+                {
+                    "id": "analytics_submit",
+                    "component": {
+                        "type": "Button",
+                        "label": "產生圖表",
+                        "variant": "primary",
+                        "action": {
+                            "name": "show_usage_analytics",
+                            "context": [
+                                {"key": "start_date", "binding": "/analytics/start_date"},
+                                {"key": "end_date", "binding": "/analytics/end_date"},
+                                {"key": "limit", "binding": "/analytics/limit"},
+                            ],
+                        },
+                    },
+                },
+            ],
+            "dataModel": {
+                "analytics": {
+                    "start_date": start.isoformat(),
+                    "end_date": today.isoformat(),
+                    "limit": "10",
+                }
+            },
+        }
+
+    def build_usage_analytics_result(
+        self,
+        start_date: str,
+        end_date: str,
+        total_sessions: int,
+        unique_users: int,
+        rows: list[dict],
+        daily_rows: list[dict],
+        daily_series: list[str],
+    ) -> dict:
+        """使用次數分析結果面板"""
+        top_user = rows[0]["user_id"] if rows else "無資料"
+        top_count = rows[0]["usage_count"] if rows else 0
+        return {
+            "surfaceId": "usage_analytics_result",
+            "subtitle": f"查詢區間：{start_date} 至 {end_date}",
+            "components": [
+                {
+                    "id": "analytics_result_title",
+                    "component": {
+                        "type": "Text",
+                        "text": "📈 使用次數圖表",
+                        "variant": "h2",
+                    },
+                },
+                {
+                    "id": "analytics_summary",
+                    "component": {
+                        "type": "Card",
+                        "children": [
+                            {"type": "Text", "text": f"查詢區間：{start_date} ~ {end_date}"},
+                            {"type": "Text", "text": f"總使用次數：{total_sessions}"},
+                            {"type": "Text", "text": f"不同 user_id 數：{unique_users}"},
+                            {"type": "Text", "text": f"最高使用者：{top_user} ({top_count} 次)"},
+                        ],
+                    },
+                },
+                {
+                    "id": "analytics_chart",
+                    "component": {
+                        "type": "PieChart",
+                        "title": "各 user_id 使用次數",
+                        "description": "依 user_id 統計使用次數，顯示各使用者在總使用量中的占比",
+                        "labelKey": "user_id",
+                        "valueKey": "usage_count",
+                        "data": rows,
+                        "emptyText": "此日期區間查無資料",
+                    },
+                },
+                {
+                    "id": "analytics_daily_stacked_chart",
+                    "component": {
+                        "type": "StackedBarChart",
+                        "title": "每日趨勢堆疊圖",
+                        "description": "以日期為 X 軸，顯示每日使用次數，並將主要 user_id 以堆疊方式呈現；其餘使用者合併為「其他」。",
+                        "xKey": "date",
+                        "series": daily_series,
+                        "data": daily_rows,
+                        "emptyText": "此日期區間沒有可顯示的每日趨勢資料",
+                    },
+                },
+            ],
+        }
+
+    def build_usage_analytics_error(
+        self,
+        start_date: str,
+        end_date: str,
+        error_message: str,
+    ) -> dict:
+        """分析查詢錯誤面板"""
+        return {
+            "surfaceId": "usage_analytics_error",
+            "subtitle": f"查詢區間：{start_date} 至 {end_date}",
+            "components": [
+                {
+                    "id": "analytics_error_title",
+                    "component": {
+                        "type": "Text",
+                        "text": "⚠️ 使用次數分析失敗",
+                        "variant": "h2",
+                    },
+                },
+                {
+                    "id": "analytics_error_card",
+                    "component": {
+                        "type": "Card",
+                        "children": [
+                            {"type": "Text", "text": f"查詢區間：{start_date} ~ {end_date}"},
+                            {"type": "Text", "text": f"錯誤訊息：{error_message}"},
+                            {"type": "Text", "text": "請確認資料庫可連線，且表 agent_sessions_QA1 內含 user_id 與 created_at 欄位。"},
+                        ],
+                    },
+                },
+            ],
         }

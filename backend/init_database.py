@@ -21,11 +21,11 @@ from agno.models.litellm import LiteLLMOpenAI
 
 DB_URL = (
     f"postgresql+psycopg://"
-    f"{os.getenv('DB_USER', 'postgres')}:"
-    f"{os.getenv('DB_PASSWORD', 'myyang')}"
-    f"@{os.getenv('DB_HOST', '127.0.0.1')}"
-    f":{os.getenv('DB_PORT', '5433')}"
-    f"/{os.getenv('DB_NAME', 'postgres')}"
+    f"{os.getenv('DB_USER', 'webui')}:"
+    f"{os.getenv('DB_PASSWORD', 'webui')}"
+    f"@{os.getenv('DB_HOST', 'postgresql.database.svc.cluster.local')}"
+    f":{os.getenv('DB_PORT', '5432')}"
+    f"/{os.getenv('DB_NAME', 'meeting_records')}"
 )
 
 
@@ -41,10 +41,11 @@ def main():
     )
 
     model = LiteLLMOpenAI(
-        id=os.getenv("MODEL_ID", "qwen35-27b"),
-        api_key=os.getenv("LITELLM_API_KEY", "sk-1234"),
-        base_url=os.getenv("LITELLM_BASE_URL", "http://localhost:4001/v1"),
-        max_tokens=64,
+        id=os.getenv("MODEL_ID", "TXC-LLM"),
+        api_key=os.getenv("LITELLM_API_KEY", "AI.7u8i(O)P"),
+        base_url=os.getenv("LITELLM_BASE_URL", "http://192.168.37.71:32290"),
+        max_tokens=4096,
+        extra_body={'chat_template_kwargs': {'enable_thinking': False}}
     )
 
     agent = Agent(model=model, db=db, markdown=True)

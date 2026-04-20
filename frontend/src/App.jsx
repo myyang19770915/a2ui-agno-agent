@@ -25,6 +25,7 @@ const WELCOME = {
     "可用指令：\n" +
     "  ・「訂位」— 餐廳訂位表單\n" +
     "  ・「意見回饋」— 滿意度調查\n" +
+    "  ・「使用次數分析」— agent_sessions_QA1 圖表查詢\n" +
     "  ・「help」— 功能說明",
 };
 
@@ -189,7 +190,7 @@ export default function App() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder='試試：「訂位」「意見回饋」「help」'
+          placeholder='試試：「訂位」「意見回饋」「使用次數分析」'
           disabled={loading}
           autoComplete="off"
         />
